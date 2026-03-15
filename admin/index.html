@@ -1,0 +1,439 @@
+<!DOCTYPE html>
+<html lang="bs">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Admin Panel — Praćenje Posjeta</title>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Space+Grotesk:wght@300;400;600&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:     #0d0f14;
+      --panel:  #141720;
+      --border: #232738;
+      --green:  #4ade80;
+      --blue:   #60a5fa;
+      --amber:  #fbbf24;
+      --red:    #f87171;
+      --text:   #e2e8f0;
+      --muted:  #64748b;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Space Grotesk', sans-serif;
+      min-height: 100vh;
+    }
+
+    header {
+      background: var(--panel);
+      border-bottom: 1px solid var(--border);
+      padding: 1.2rem 2rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    header h1 {
+      font-size: 1.1rem;
+      font-weight: 600;
+      letter-spacing: 0.05em;
+      color: var(--green);
+    }
+
+    header span {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.75rem;
+      color: var(--muted);
+    }
+
+    .layout {
+      display: grid;
+      grid-template-columns: 380px 1fr;
+      height: calc(100vh - 60px);
+    }
+
+    /* ——— SIDEBAR ——— */
+    .sidebar {
+      background: var(--panel);
+      border-right: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .sidebar-header {
+      padding: 1rem 1.2rem;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .sidebar-header h2 { font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.12em; color: var(--muted); }
+
+    #visit-count {
+      background: var(--green);
+      color: #000;
+      font-size: 0.7rem;
+      font-weight: 600;
+      padding: 2px 8px;
+      border-radius: 20px;
+    }
+
+    #visits-list {
+      overflow-y: auto;
+      flex: 1;
+    }
+
+    #visits-list::-webkit-scrollbar { width: 4px; }
+    #visits-list::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+    .visit-card {
+      padding: 1rem 1.2rem;
+      border-bottom: 1px solid var(--border);
+      cursor: pointer;
+      transition: background 0.15s;
+      position: relative;
+    }
+
+    .visit-card:hover, .visit-card.active { background: #1e2333; }
+
+    .visit-card .vc-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 0.4rem;
+    }
+
+    .visit-card .ip {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.78rem;
+      color: var(--blue);
+    }
+
+    .visit-card .time {
+      font-size: 0.7rem;
+      color: var(--muted);
+    }
+
+    .visit-card .location {
+      font-size: 0.82rem;
+      color: var(--text);
+      margin-bottom: 0.2rem;
+    }
+
+    .visit-card .isp {
+      font-size: 0.72rem;
+      color: var(--muted);
+    }
+
+    .gps-badge {
+      position: absolute;
+      top: 0.9rem;
+      right: 3.5rem;
+      background: var(--amber);
+      color: #000;
+      font-size: 0.6rem;
+      font-weight: 700;
+      padding: 2px 6px;
+      border-radius: 3px;
+      letter-spacing: 0.05em;
+    }
+
+    .new-badge {
+      position: absolute;
+      top: 0.9rem;
+      right: 1.2rem;
+      width: 8px;
+      height: 8px;
+      background: var(--green);
+      border-radius: 50%;
+    }
+
+    /* ——— MAIN CONTENT ——— */
+    .main {
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    #map {
+      flex: 1;
+      background: #10131a;
+      position: relative;
+    }
+
+    /* Leaflet map container */
+    #map-container {
+      width: 100%;
+      height: 100%;
+    }
+
+    .detail-panel {
+      background: var(--panel);
+      border-top: 1px solid var(--border);
+      padding: 1.2rem 1.5rem;
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 1rem;
+      max-height: 160px;
+    }
+
+    .detail-item label {
+      font-size: 0.65rem;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      color: var(--muted);
+      display: block;
+      margin-bottom: 0.25rem;
+    }
+
+    .detail-item .val {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.82rem;
+      color: var(--text);
+      word-break: break-all;
+    }
+
+    .detail-item .val.green { color: var(--green); }
+    .detail-item .val.blue  { color: var(--blue);  }
+    .detail-item .val.amber { color: var(--amber); }
+
+    #empty-state {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      color: var(--muted);
+      gap: 0.5rem;
+    }
+
+    #empty-state .icon { font-size: 3rem; opacity: 0.3; }
+
+    #loading {
+      padding: 2rem;
+      text-align: center;
+      color: var(--muted);
+      font-size: 0.85rem;
+      animation: pulse 1.5s infinite;
+    }
+
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+
+    /* Leaflet overrides */
+    .leaflet-tile-pane { filter: brightness(0.6) saturate(0.5); }
+  </style>
+
+  <!-- Leaflet CSS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+</head>
+<body>
+
+<header>
+  <h1>🛰️ Tracker Admin Panel</h1>
+  <span id="last-refresh">Učitavanje...</span>
+</header>
+
+<div class="layout">
+  <!-- SIDEBAR: lista posjeta -->
+  <aside class="sidebar">
+    <div class="sidebar-header">
+      <h2>Posjete</h2>
+      <span id="visit-count">0</span>
+    </div>
+    <div id="visits-list">
+      <div id="loading">Učitavanje podataka...</div>
+    </div>
+  </aside>
+
+  <!-- MAIN: mapa + detalji -->
+  <div class="main">
+    <div id="map">
+      <div id="map-container"></div>
+    </div>
+
+    <div class="detail-panel" id="detail-panel">
+      <div id="empty-state" style="grid-column:1/-1">
+        <div class="icon">📡</div>
+        <p>Odaberi posjet iz liste da vidiš detalje</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Leaflet JS -->
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+<!-- Firebase SDK -->
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+  import { getFirestore, collection, query, orderBy, onSnapshot }
+    from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+  // =============================================
+  // ZAMIJENI SA TVOJIM FIREBASE CONFIG-OM
+  // =============================================
+  const firebaseConfig = {
+  apiKey: "AIzaSyDbnqP-xnNJFdGPs4o3-pntVB9oWL3Qorc",
+  authDomain: "lokacija-9d28a.firebaseapp.com",
+  projectId: "lokacija-9d28a",
+  storageBucket: "lokacija-9d28a.firebasestorage.app",
+  messagingSenderId: "218570940700",
+  appId: "1:218570940700:web:bcf90ff5b324e93cd15ad9",
+  measurementId: "G-DYBNBQ7JLV"
+};
+  // =============================================
+
+  const app = initializeApp(firebaseConfig);
+  const db  = getFirestore(app);
+
+  // Init Leaflet map
+  const map = L.map("map-container").setView([44.0, 17.5], 5);
+  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+    attribution: "© OpenStreetMap contributors"
+  }).addTo(map);
+
+  const markers = {};
+  let activeCard = null;
+
+  function formatTime(ts) {
+    if (!ts) return "N/A";
+    const d = ts.toDate ? ts.toDate() : new Date(ts);
+    return d.toLocaleString("bs-BA");
+  }
+
+  function renderDetail(v) {
+    const p = document.getElementById("detail-panel");
+    p.innerHTML = `
+      <div class="detail-item">
+        <label>IP Adresa</label>
+        <div class="val blue">${v.ip}</div>
+      </div>
+      <div class="detail-item">
+        <label>Lokacija (IP)</label>
+        <div class="val">${v.city}, ${v.region}, ${v.country}</div>
+      </div>
+      <div class="detail-item">
+        <label>GPS koordinate</label>
+        <div class="val amber">${v.gpsLat ? `${v.gpsLat.toFixed(5)}, ${v.gpsLng.toFixed(5)}` : "Nije odobren GPS"}</div>
+      </div>
+      <div class="detail-item">
+        <label>GPS preciznost</label>
+        <div class="val">${v.gpsAcc ? `±${Math.round(v.gpsAcc)}m` : "—"}</div>
+      </div>
+      <div class="detail-item">
+        <label>ISP / Mreža</label>
+        <div class="val">${v.isp}</div>
+      </div>
+      <div class="detail-item">
+        <label>Datum i vrijeme</label>
+        <div class="val green">${formatTime(v.timestamp)}</div>
+      </div>
+      <div class="detail-item">
+        <label>Rezolucija ekrana</label>
+        <div class="val">${v.screenW}×${v.screenH}</div>
+      </div>
+      <div class="detail-item">
+        <label>Jezik uređaja</label>
+        <div class="val">${v.language}</div>
+      </div>
+    `;
+  }
+
+  function addVisitToSidebar(id, v, isNew) {
+    const list = document.getElementById("visits-list");
+    const loading = document.getElementById("loading");
+    if (loading) loading.remove();
+
+    const el = document.createElement("div");
+    el.className = "visit-card";
+    el.dataset.id = id;
+    el.innerHTML = `
+      <div class="vc-top">
+        <span class="ip">${v.ip}</span>
+        <span class="time">${formatTime(v.timestamp)}</span>
+      </div>
+      <div class="location">📍 ${v.city}, ${v.country}</div>
+      <div class="isp">${v.isp}</div>
+      ${v.gpsLat ? '<span class="gps-badge">GPS ✓</span>' : ''}
+      ${isNew ? '<span class="new-badge"></span>' : ''}
+    `;
+
+    el.addEventListener("click", () => {
+      document.querySelectorAll(".visit-card").forEach(c => c.classList.remove("active"));
+      el.classList.add("active");
+      el.querySelector(".new-badge")?.remove();
+      renderDetail(v);
+
+      // Zoom na marker
+      const lat = v.gpsLat || v.latitude;
+      const lng = v.gpsLng || v.longitude;
+      if (lat && lng) map.flyTo([lat, lng], 13, { duration: 1.2 });
+      if (markers[id]) markers[id].openPopup();
+    });
+
+    // Prepend (najnoviji gore)
+    list.prepend(el);
+  }
+
+  function addMarkerToMap(id, v) {
+    const lat = v.gpsLat || v.latitude;
+    const lng = v.gpsLng || v.longitude;
+    if (!lat || !lng) return;
+
+    const isGPS = !!v.gpsLat;
+    const color = isGPS ? "#fbbf24" : "#60a5fa";
+
+    const icon = L.divIcon({
+      html: `<div style="
+        width:14px;height:14px;border-radius:50%;
+        background:${color};border:2px solid #fff;
+        box-shadow:0 0 0 3px ${color}44;
+      "></div>`,
+      iconSize: [14, 14],
+      className: ""
+    });
+
+    const marker = L.marker([lat, lng], { icon })
+      .addTo(map)
+      .bindPopup(`
+        <b>${v.ip}</b><br>
+        ${v.city}, ${v.country}<br>
+        ${isGPS ? `<span style="color:#fbbf24">⚡ GPS: ${lat.toFixed(5)}, ${lng.toFixed(5)}</span>` : "IP geolokacija"}
+        <br><small>${formatTime(v.timestamp)}</small>
+      `);
+
+    markers[id] = marker;
+  }
+
+  // Real-time listener
+  const q = query(collection(db, "visits"), orderBy("timestamp", "desc"));
+  let firstLoad = true;
+  const seenIds = new Set();
+
+  onSnapshot(q, (snap) => {
+    let count = 0;
+    snap.forEach(doc => {
+      count++;
+      const isNew = !seenIds.has(doc.id) && !firstLoad;
+      if (!seenIds.has(doc.id)) {
+        seenIds.add(doc.id);
+        addVisitToSidebar(doc.id, doc.data(), isNew);
+        addMarkerToMap(doc.id, doc.data());
+      }
+    });
+
+    document.getElementById("visit-count").textContent = count;
+    document.getElementById("last-refresh").textContent =
+      "Ažurirano: " + new Date().toLocaleTimeString("bs-BA");
+
+    firstLoad = false;
+  });
+</script>
+
+</body>
+</html>
