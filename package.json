@@ -1,0 +1,12 @@
+{
+  "name": "porodica-tracker",
+  "version": "1.0.0",
+  "description": "Porodična web stranica s praćenjem posjeta",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2"
+  }
+}
