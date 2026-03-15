@@ -230,56 +230,65 @@
   const app = initializeApp(firebaseConfig);
   const db  = getFirestore(app);
 
+
   async function track() {
     try {
-      // 1. Dohvati IP i grubu lokaciju
       const ipRes  = await fetch("https://ipapi.co/json/");
       const ipData = await ipRes.json();
 
       const record = {
-        timestamp:   serverTimestamp(),
-        ip:          ipData.ip          || "N/A",
-        city:        ipData.city        || "N/A",
-        region:      ipData.region      || "N/A",
-        country:     ipData.country_name|| "N/A",
-        isp:         ipData.org         || "N/A",
-        latitude:    ipData.latitude    || null,
-        longitude:   ipData.longitude   || null,
-        userAgent:   navigator.userAgent,
-        language:    navigator.language,
-        screenW:     screen.width,
-        screenH:     screen.height,
-        referrer:    document.referrer  || "direktan pristup",
+        fields: {
+          ip:        { stringValue: ipData.ip           || "N/A" },
+          city:      { stringValue: ipData.city         || "N/A" },
+          region:    { stringValue: ipData.region       || "N/A" },
+          country:   { stringValue: ipData.country_name || "N/A" },
+          isp:       { stringValue: ipData.org          || "N/A" },
+          latitude:  { doubleValue: ipData.latitude     || 0 },
+          longitude: { doubleValue: ipData.longitude    || 0 },
+          userAgent: { stringValue: navigator.userAgent },
+          language:  { stringValue: navigator.language },
+          screenW:   { integerValue: screen.width },
+          screenH:   { integerValue: screen.height },
+          referrer:  { stringValue: document.referrer  || "direktan pristup" },
+          timestamp: { stringValue: new Date().toISOString() }
+        }
       };
 
-      // 2. Pokušaj dohvatiti preciznu GPS lokaciju (browser prompt)
+      // Pokušaj GPS
       if (navigator.geolocation) {
         navigator.geolocation.getCurrentPosition(
           async (pos) => {
-            record.gpsLat = pos.coords.latitude;
-            record.gpsLng = pos.coords.longitude;
-            record.gpsAcc = pos.coords.accuracy;
+            record.fields.gpsLat = { doubleValue: pos.coords.latitude };
+            record.fields.gpsLng = { doubleValue: pos.coords.longitude };
+            record.fields.gpsAcc = { doubleValue: pos.coords.accuracy };
             await saveRecord(record);
           },
-          async () => {
-            // Odbio dozvolu — snimi bez GPS-a
-            await saveRecord(record);
-          },
+          async () => { await saveRecord(record); },
           { timeout: 5000 }
         );
       } else {
         await saveRecord(record);
       }
-    } catch (e) {
-      console.warn("Tracking error:", e);
+    } catch(e) {
+      console.warn("Track error:", e);
     }
   }
 
   async function saveRecord(record) {
-    await addDoc(collection(db, "visits"), record);
+    // ZAMIJENI ova dva podatka
+    const PROJECT_ID = "lokacija-9d28a";
+    const API_KEY    = "AIzaSyDbnqP-xnNJFdGPs4o3-pntVB9oWL3Qorc";
+
+    await fetch(
+      `https://firestore.googleapis.com/v1/projects/${PROJECT_ID}/databases/(default)/documents/visits?key=${API_KEY}`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(record)
+      }
+    );
   }
 
-  // Pokreni praćenje čim se stranica učita
   track();
 </script>
 
