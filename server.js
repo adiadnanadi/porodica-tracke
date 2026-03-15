@@ -8,7 +8,7 @@ app.use((req, res, next) => {
     "Content-Security-Policy",
     "default-src 'self'; " +
     "script-src 'self' 'unsafe-eval' 'unsafe-inline' https://*.googleapis.com https://*.gstatic.com https://unpkg.com; " +
-    "connect-src 'self' https://*.googleapis.com https://*.firebaseio.com https://firestore.googleapis.com https://ipapi.co; " +
+"connect-src 'self' https://*.googleapis.com https://*.firebaseio.com https://firestore.googleapis.com https://ipapi.co https://*.gstatic.com; " +
     "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://unpkg.com; " +
     "font-src 'self' https://fonts.gstatic.com; " +
     "img-src 'self' data: https://*.openstreetmap.org;"
